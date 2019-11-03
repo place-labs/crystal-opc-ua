@@ -1,0 +1,12 @@
+name: opc-ua
+version: 0.0.1
+
+dependencies:
+  bindata:
+    github: spider-gazelle/bindata
+  tokenizer:
+    github: spider-gazelle/tokenizer
+
+development_dependencies:
+  ameba:
+    github: veelenga/ameba
