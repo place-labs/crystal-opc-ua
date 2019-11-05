@@ -215,6 +215,9 @@ module OPC
     custom additional_header : ExtensionObject = ExtensionObject.new
   end
 
+  # TODO:: When parsing the security headers we need to peak the secure channel ID
+  # so we can determine if we are using Symmetric or Asymmetric encryption
+  #
   # https://reference.opcfoundation.org/v104/Core/docs/Part6/6.7.2/
   class AsymmetricSecurityHeader < BinData
     endian little
@@ -225,9 +228,9 @@ module OPC
     int32 :security_policy_uri_length, value: ->{ OPC.store security_policy_uri.bytesize }
     string :security_policy_uri, length: ->{ OPC.calculate security_policy_uri_length }
 
-    uint32 :sender_certificate_length, value: ->{ OPC.store sender_certificate.size }
+    int32 :sender_certificate_length, value: ->{ OPC.store sender_certificate.size }
     bytes :sender_certificate, length: ->{ OPC.calculate sender_certificate_length }
-    uint32 :receiver_certificate_thumbprint_length, value: ->{ OPC.store receiver_certificate_thumbprint.size }
+    int32 :receiver_certificate_thumbprint_length, value: ->{ OPC.store receiver_certificate_thumbprint.size }
     bytes :receiver_certificate_thumbprint, length: ->{ OPC.calculate receiver_certificate_thumbprint_length }
   end
 
@@ -252,6 +255,7 @@ module OPC
     Renew
   end
 
+  # https://reference.opcfoundation.org/v104/Core/docs/Part4/7.15/
   enum MessageSecurityMode
     NoSecurity     = 1
     Sign
@@ -262,8 +266,9 @@ module OPC
     endian little
 
     custom security_header : AsymmetricSecurityHeader = AsymmetricSecurityHeader.new
-    custom sequence_header : SequenceHeader = SequenceHeader.new
 
+    # Data that can be encrypted:
+    custom sequence_header : SequenceHeader = SequenceHeader.new
     custom request_indicator : NodeID = NodeID.new
     custom request_header : RequestHeader = RequestHeader.new
 
@@ -271,7 +276,7 @@ module OPC
     enum_field UInt32, request_type : SecurityTokenRequestType = SecurityTokenRequestType::Issue
     enum_field UInt32, security_mode : MessageSecurityMode = MessageSecurityMode::NoSecurity
 
-    uint32 :client_nonce_size, value: ->{ OPC.store client_nonce.size }
+    int32 :client_nonce_size, value: ->{ OPC.store client_nonce.size }
     bytes :client_nonce, length: ->{ OPC.calculate client_nonce_size }
 
     # Milliseconds to keep the channel alive
@@ -281,6 +286,13 @@ module OPC
   # =========================
   # Response related classes:
   # =========================
+
+  class GenericString < BinData
+    endian little
+
+    int32 :value_size, value: ->{ OPC.store value.bytesize }
+    string :value, length: ->{ OPC.calculate value_size }
+  end
 
   # https://reference.opcfoundation.org/v104/Core/docs/Part4/7.29/
   class ResponseHeader < BinData
@@ -295,28 +307,187 @@ module OPC
     # https://reference.opcfoundation.org/v104/Core/docs/Part4/7.8/
     uint8 service_diagnostics
 
+    int32 :string_table_size, value: ->{ OPC.store string_table.size }
+    array string_table : GenericString, length: ->{ OPC.calculate string_table_size }
 
+    custom additional_header : ExtensionObject = ExtensionObject.new
+  end
 
+  class ChannelSecurityToken < BinData
+    endian little
+
+    uint32 :channel_id
+    uint32 :token_id
+    uint64 :timestamp
+    uint32 :revised_lifetime
+
+    int32 :server_nonce_size, value: ->{ OPC.store server_nonce.size }
+    bytes :server_nonce, length: ->{ OPC.calculate server_nonce_size }
+
+    def created_at
+      OPC.ua_datetime_to_time timestamp
+    end
   end
 
   class OpenSecureChannelResponse < BinData
     endian little
 
-    custom security_header : AsymmetricSecurityHeader = AsymmetricSecurityHeader.new
-    custom sequence_header : SequenceHeader = SequenceHeader.new
+    # custom security_header : AsymmetricSecurityHeader = AsymmetricSecurityHeader.new
 
+    # Data that can be encrypted:
+    # ==========================
+    # custom sequence_header : SequenceHeader = SequenceHeader.new
+    # custom request_indicator : NodeID = NodeID.new
+    custom response_header : ResponseHeader = ResponseHeader.new
+    uint32 :protocol_version
+    custom security_token : ChannelSecurityToken = ChannelSecurityToken.new
+  end
+
+  class GetEndPointsRequest < BinData
+    endian little
+
+    DEFAULT_LOCALE_ID = GenericString.new
+    DEFAULT_LOCALE_ID.value = "http://opcfoundation.org/UA-Profile/Transport/uatcp-uasc-uabinary"
+
+    DEFAULT_PROFILE_URI = GenericString.new
+    DEFAULT_PROFILE_URI.value = "http://opcfoundation.org/UA-Profile/Transport/uatcp-uasc-uabinary"
+
+    # This is typically not part of the request - but this will never be encrpyted
+    custom security_header : SymmetricSecurityHeader = SymmetricSecurityHeader.new
+
+    custom sequence_header : SequenceHeader = SequenceHeader.new
     custom request_indicator : NodeID = NodeID.new
     custom request_header : RequestHeader = RequestHeader.new
 
-    uint32 :protocol_version
-    enum_field UInt32, request_type : SecurityTokenRequestType = SecurityTokenRequestType::Issue
+    int32 :endpoint_url_size, value: ->{ OPC.store endpoint_url.bytesize }
+    string :endpoint_url, length: ->{ OPC.calculate endpoint_url_size }
+
+    int32 :locale_ids_size, value: ->{ OPC.store locale_ids.size }
+    array locale_ids : GenericString, length: ->{ OPC.calculate locale_ids_size }
+
+    int32 :profile_uris_size, value: ->{ OPC.store profile_uris.size }
+    array profile_uris : GenericString, length: ->{ OPC.calculate profile_uris_size }
+  end
+
+  # https://reference.opcfoundation.org/v104/Core/DataTypes/ApplicationType/
+  enum ApplicationType
+    Server
+    Client
+    ClientAndServer
+    DiscoveryServer
+  end
+
+  # https://reference.opcfoundation.org/v104/Core/docs/Part6/5.2.2/#Table13
+  @[Flags]
+  enum LocalizedTextFlags
+    Locale # 1
+    Text   # 2
+  end
+
+  # https://reference.opcfoundation.org/v104/Core/docs/Part6/5.2.2/#Table13
+  class LocalizedText < BinData
+    endian little
+
+    enum_field UInt8, mask : LocalizedTextFlags = LocalizedTextFlags::None
+
+    int32 :locale_size, value: ->{ OPC.store locale.bytesize }, onlyif: ->{ mask.locale? }
+    string :locale, length: ->{ OPC.calculate locale_size }, onlyif: ->{ mask.locale? }
+
+    int32 :text_size, value: ->{ OPC.store text.bytesize }, onlyif: ->{ mask.text? }
+    string :text, length: ->{ OPC.calculate text_size }, onlyif: ->{ mask.text? }
+  end
+
+  # https://reference.opcfoundation.org/v104/Core/DataTypes/ApplicationDescription/
+  class ApplicationDescription < BinData
+    endian little
+
+    int32 :application_url_size, value: ->{ OPC.store application_url.bytesize }
+    string :application_url, length: ->{ OPC.calculate application_url_size }
+
+    int32 :product_url_size, value: ->{ OPC.store product_url.bytesize }
+    string :product_url, length: ->{ OPC.calculate product_url_size }
+
+    custom application_name : LocalizedText = LocalizedText.new
+    enum_field UInt32, application_type : ApplicationType = ApplicationType::Client
+
+    int32 :gateway_server_uri_size, value: ->{ OPC.store gateway_server_uri.bytesize }
+    string :gateway_server_uri, length: ->{ OPC.calculate gateway_server_uri_size }
+
+    int32 :discovery_profile_uri_size, value: ->{ OPC.store discovery_profile_uri.bytesize }
+    string :discovery_profile_uri, length: ->{ OPC.calculate discovery_profile_uri_size }
+
+    int32 :disovery_urls_size, value: ->{ OPC.store disovery_urls.size }
+    array disovery_urls : GenericString, length: ->{ OPC.calculate disovery_urls_size }
+  end
+
+  # https://reference.opcfoundation.org/v104/Core/DataTypes/UserTokenType/
+  enum UserTokenType
+    Anonymous
+    UserName
+    Certificate
+    IssuedToken
+  end
+
+  # https://reference.opcfoundation.org/v104/Core/DataTypes/UserTokenPolicy/
+  class UserTokenPolicy < BinData
+    endian little
+
+    int32 :gateway_server_uri_size, value: ->{ OPC.store gateway_server_uri.bytesize }
+    string :gateway_server_uri, length: ->{ OPC.calculate gateway_server_uri_size }
+
+    enum_field UInt32, token_type : UserTokenType = UserTokenType::Anonymous
+
+    int32 :gateway_server_uri_size, value: ->{ OPC.store gateway_server_uri.bytesize }
+    string :gateway_server_uri, length: ->{ OPC.calculate gateway_server_uri_size }
+
+    int32 :gateway_server_uri_size, value: ->{ OPC.store gateway_server_uri.bytesize }
+    string :gateway_server_uri, length: ->{ OPC.calculate gateway_server_uri_size }
+
+    int32 :gateway_server_uri_size, value: ->{ OPC.store gateway_server_uri.bytesize }
+    string :gateway_server_uri, length: ->{ OPC.calculate gateway_server_uri_size }
+  end
+
+  # https://reference.opcfoundation.org/v104/Core/DataTypes/EndpointDescription/
+  # https://reference.opcfoundation.org/v104/Core/docs/Part4/7.10/
+  class EndPointDescription < BinData
+    endian little
+
+    int32 :endpoint_url_size, value: ->{ OPC.store endpoint_url.bytesize }
+    string :endpoint_url, length: ->{ OPC.calculate endpoint_url_size }
+
+    custom server : ApplicationDescription = ApplicationDescription.new
+
+    int32 :server_certificate_size, value: ->{ OPC.store server_certificate.size }
+    bytes :server_certificate, length: ->{ OPC.calculate server_certificate_size }
+
     enum_field UInt32, security_mode : MessageSecurityMode = MessageSecurityMode::NoSecurity
+    int32 :security_policy_uri_length, value: ->{ OPC.store security_policy_uri.bytesize }
+    string :security_policy_uri, length: ->{ OPC.calculate security_policy_uri_length }
 
-    uint32 :client_nonce_size, value: ->{ OPC.store client_nonce.size }
-    bytes :client_nonce, length: ->{ OPC.calculate client_nonce_size }
+    int32 :user_identity_tokens_size, value: ->{ OPC.store user_identity_tokens.size }
+    array user_identity_tokens : UserTokenPolicy, length: ->{ OPC.calculate user_identity_tokens_size }
 
-    # Milliseconds to keep the channel alive
-    uint32 :requested_lifetime
+    int32 :transport_profile_uri_length, value: ->{ OPC.store transport_profile_uri.bytesize }
+    string :transport_profile_uri, length: ->{ OPC.calculate transport_profile_uri_length }
+
+    # Just here so you can sort on security level (higher is better)
+    uint8 :security_level
+  end
+
+  class GetEndPointsResponse < BinData
+    endian little
+
+    custom response_header : ResponseHeader = ResponseHeader.new
+    int32 :endpoints_size, value: ->{ OPC.store endpoints.size }
+    array endpoints : EndPointDescription, length: ->{ OPC.calculate endpoints_size }
+  end
+
+  class CloseSecureChannel < BinData
+    endian little
+
+    custom sequence_header : SequenceHeader = SequenceHeader.new
+    custom request_indicator : NodeID = NodeID.new
+    custom request_header : RequestHeader = RequestHeader.new
   end
 
   # https://reference.opcfoundation.org/v104/Core/docs/Part6/6.7.2/
@@ -400,12 +571,33 @@ module OPC
       secure.sequence_header.sequence_number = 1
       secure.sequence_header.request_id = 1
       secure.request_indicator.node_type = TypeOfNodeID::FourByte
-      secure.request_indicator.four_byte_data = 446
+      secure.request_indicator.four_byte_data = ObjectId[:open_secure_channel_request_encoding_default_binary]
       secure.security_header.security_policy_uri = "http://opcfoundation.org/UA/SecurityPolicy#None"
       msg_bytes = secure.to_slice
 
       header = MessageHeader.new
       header.message_type = MESSAGE_TYPE[:open_secure_channel]
+      header.chunk_indicator = CHUNK_TYPE[:final]
+      header.size = (msg_bytes.size + 8).to_u32
+
+      {header.to_slice, msg_bytes}
+    end
+
+    # This assumes no session has been started (just an insecure secure channel opened)
+    def get_end_points(channel_id, token_id, sequence_number, request_id, endpoint_url)
+      request = GetEndPointsRequest.new
+      request.security_header.secure_channel_id = channel_id.to_u32
+      request.security_header.token_id = token_id.to_u32
+      request.sequence_header.sequence_number = sequence_number.to_u32
+      request.sequence_header.request_id = request_id.to_u32
+      request.request_indicator.node_type = TypeOfNodeID::FourByte
+      request.request_indicator.four_byte_data = ObjectId[:get_endpoints_request_encoding_default_binary]
+
+      request.endpoint_url = endpoint_url
+
+      msg_bytes = request.to_slice
+      header = MessageHeader.new
+      header.message_type = MESSAGE_TYPE[:message]
       header.chunk_indicator = CHUNK_TYPE[:final]
       header.size = (msg_bytes.size + 8).to_u32
 
@@ -446,19 +638,115 @@ module OPC
 
         header = client.read_bytes OPC::MessageHeader
         case header.message_type
-        when "ACK"
-          client.read_bytes OPC::AcknowledgeMessage
         when "ERR"
           client.read_bytes OPC::ErrorMessage
+          # NOTE:: Some servers return OPN as a response here
+          # ... need to
+        when "MSG", "OPN"
+          security_header = client.read_bytes OPC::AsymmetricSecurityHeader
+
+          # TODO:: remainder of the message may be encrypted (decrypt here)
+          # Although the initial connection should be clear text to discover what
+          # encryption standards are supported.
+          sequence_header = client.read_bytes OPC::SequenceHeader
+          request_indicator = client.read_bytes OPC::NodeID
+          response_type = ObjectLookup[request_indicator.four_byte_data]?
+
+          case response_type
+          when :open_secure_channel_response, :open_secure_channel_response_encoding_default_binary
+            channel_details = client.read_bytes OpenSecureChannelResponse
+            query_end_points(client, connection_string, channel_details)
+          else
+            raise "Unexpected response: #{response_type.to_s}"
+          end
         else
+          raise "Unexpected response: #{header.message_type}"
+
           # TODO:: parse the open secure channel response
           raw_data = Bytes.new(2048)
           bytes_read = client.read raw_data
           data = raw_data[0, bytes_read]
+          puts header.inspect
+          raise data.to_s
         end
       ensure
         client.close
       end
+    end
+
+    def query_end_points(client : TCPSocket, connection : String, channel_details : OpenSecureChannelResponse)
+      channel_id = channel_details.security_token.channel_id
+      token_id = channel_details.security_token.token_id
+
+      # Open message was sequence number 1
+      sequence_number = 2
+      request_id = 2
+
+      # We want to obtain the list of security standards supported
+      header, msg = get_end_points(channel_id, token_id, sequence_number, request_id, connection)
+      client.write header
+      client.write msg
+      client.flush
+
+      header = client.read_bytes OPC::MessageHeader
+      case header.message_type
+      when "ERR"
+        client.read_bytes OPC::ErrorMessage
+      when "MSG"
+        # TODO:: read the channel ID, then rewind to parse header
+        security_header = client.read_bytes OPC::SymmetricSecurityHeader
+
+        # TODO:: remainder of the message may be encrypted (decrypt here)
+        # Although the initial connection should be clear text to discover what
+        # encryption standards are supported.
+        sequence_header = client.read_bytes OPC::SequenceHeader
+        request_indicator = client.read_bytes OPC::NodeID
+        response_type = ObjectLookup[request_indicator.four_byte_data]?
+
+        case response_type
+        when :get_endpoints_response, :get_endpoints_response_encoding_default_binary
+          endpoints_response = client.read_bytes GetEndPointsResponse
+          parts = close_channel(channel_id, token_id)
+          parts.each { |bytes| client.write(bytes) }
+          client.flush
+
+          endpoints_response
+        else
+          raise "Unexpected response: #{response_type.to_s}"
+        end
+      else
+        # TODO:: parse the open secure channel response
+        raw_data = Bytes.new(2048)
+        bytes_read = client.read raw_data
+        data = raw_data[0, bytes_read]
+        raise data.to_s
+      end
+    end
+
+    def close_channel(channel_id, token_id)
+      # Open message was sequence number 1
+      sequence_number = 3
+      request_id = 3
+
+      # TODO:: detect the type of security header that should be used
+      sec_header = SymmetricSecurityHeader.new
+      sec_header.secure_channel_id = channel_id.to_u32
+      sec_header.token_id = token_id.to_u32
+
+      request = CloseSecureChannel.new
+      request.sequence_header.sequence_number = sequence_number.to_u32
+      request.sequence_header.request_id = request_id.to_u32
+      request.request_indicator = OPC.request_indicator(:close_secure_channel_request_encoding_default_binary)
+
+      sec_bytes = sec_header.to_slice
+      request_bytes = request.to_slice
+
+      header = MessageHeader.new
+      header.message_type = MESSAGE_TYPE[:close_secure_channel]
+      header.chunk_indicator = CHUNK_TYPE[:final]
+      header.size = (sec_bytes.size + request_bytes.size + 8).to_u32
+
+      {header.to_slice, sec_bytes, request_bytes}
     end
   end
 end
