@@ -6,6 +6,8 @@ dependencies:
     github: spider-gazelle/bindata
   tokenizer:
     github: spider-gazelle/tokenizer
+  tasker:
+    github: spider-gazelle/tasker
 
 development_dependencies:
   ameba:
