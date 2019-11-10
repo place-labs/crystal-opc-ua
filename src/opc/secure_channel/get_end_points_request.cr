@@ -8,10 +8,6 @@ class OPC::GetEndPointsRequest < BinData
   DEFAULT_PROFILE_URI = GenericString.new
   DEFAULT_PROFILE_URI.value = "http://opcfoundation.org/UA-Profile/Transport/uatcp-uasc-uabinary"
 
-  # This is typically not part of the request - but this will never be encrpyted
-  custom security_header : SymmetricSecurityHeader = SymmetricSecurityHeader.new
-
-  custom sequence_header : SequenceHeader = SequenceHeader.new
   custom request_indicator : NodeID = NodeID.new
   custom request_header : RequestHeader = RequestHeader.new
 

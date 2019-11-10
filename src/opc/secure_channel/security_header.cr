@@ -1,13 +1,17 @@
 
 module OPC
+  class BaseSecurityHeader < BinData
+    endian little
+
+    uint32 :secure_channel_id
+  end
+
   # TODO:: When parsing the security headers we need to peak the secure channel ID
   # so we can determine if we are using Symmetric or Asymmetric encryption
   #
   # https://reference.opcfoundation.org/v104/Core/docs/Part6/6.7.2/
-  class AsymmetricSecurityHeader < BinData
+  class AsymmetricSecurityHeader < BaseSecurityHeader
     endian little
-
-    uint32 :secure_channel_id
 
     # i.e. "http://opcfoundation.org/UA/SecurityPolicy#None"
     int32 :security_policy_uri_length, value: ->{ OPC.store security_policy_uri.bytesize }
@@ -20,10 +24,9 @@ module OPC
   end
 
   # https://reference.opcfoundation.org/v104/Core/docs/Part6/6.7.2/
-  class SymmetricSecurityHeader < BinData
+  class SymmetricSecurityHeader < BaseSecurityHeader
     endian little
 
-    uint32 :secure_channel_id
     uint32 :token_id
   end
 end

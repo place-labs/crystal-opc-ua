@@ -15,10 +15,6 @@ module OPC
   class OpenSecureChannelRequest < BinData
     endian little
 
-    custom security_header : AsymmetricSecurityHeader = AsymmetricSecurityHeader.new
-
-    # Data that can be encrypted:
-    custom sequence_header : SequenceHeader = SequenceHeader.new
     custom request_indicator : NodeID = NodeID.new
     custom request_header : RequestHeader = RequestHeader.new
 

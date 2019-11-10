@@ -8,6 +8,8 @@ dependencies:
     github: spider-gazelle/tokenizer
   tasker:
     github: spider-gazelle/tasker
+  promise:
+    github: spider-gazelle/promise
 
 development_dependencies:
   ameba:

@@ -2,8 +2,14 @@ require "./helper"
 
 describe OPC do
   it "should negotiate an insecure secure channel" do
-    # opcua = OPC::UA.new
-    # opcua.connect_to("opc.mtconnect.org", 4840, "opc.tcp://opc.mtconnect.org:4840")
+    #server = "opcua.rocks"
+    #port = 4840
+    #client = TCPSocket.new(server, port)
+
+    #channel = OPC::Channel.new client
+    #channel.open "opc.tcp://opcua.rocks:4840"
+    #channel.supported_security_policies
+    #channel.close
 
     data = "\x4d\x53\x47\x46\x61\x26\x00\x00\x05\x00\x00\x00\x0a\x00\x00\x00" \
            "\x02\x00\x00\x00\x02\x00\x00\x00\x01\x00\xaf\x01\xba\xb7\xa8\x5d" \
