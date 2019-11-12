@@ -12,18 +12,12 @@ module OPC
   class UserTokenPolicy < BinData
     endian little
 
-    int32 :gateway_server_uri_size, value: ->{ OPC.store gateway_server_uri.bytesize }
-    string :gateway_server_uri, length: ->{ OPC.calculate gateway_server_uri_size }
+    OPC.string :policy_id
 
     enum_field UInt32, token_type : UserTokenType = UserTokenType::Anonymous
 
-    int32 :gateway_server_uri_size, value: ->{ OPC.store gateway_server_uri.bytesize }
-    string :gateway_server_uri, length: ->{ OPC.calculate gateway_server_uri_size }
-
-    int32 :gateway_server_uri_size, value: ->{ OPC.store gateway_server_uri.bytesize }
-    string :gateway_server_uri, length: ->{ OPC.calculate gateway_server_uri_size }
-
-    int32 :gateway_server_uri_size, value: ->{ OPC.store gateway_server_uri.bytesize }
-    string :gateway_server_uri, length: ->{ OPC.calculate gateway_server_uri_size }
+    OPC.string :issued_token_type
+    OPC.string :issuer_endpoint_url
+    OPC.string :security_policy_uri
   end
 end

@@ -2,6 +2,11 @@
 class OPC::GenericString < BinData
   endian little
 
-  int32 :value_size, value: ->{ OPC.store value.bytesize }
-  string :value, length: ->{ OPC.calculate value_size }
+  def self.new(string : String)
+    instance = GenericString.new
+    instance.value = string
+    instance
+  end
+
+  OPC.string :value
 end

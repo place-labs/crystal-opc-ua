@@ -8,15 +8,10 @@ class OPC::GetEndPointsRequest < BinData
   DEFAULT_PROFILE_URI = GenericString.new
   DEFAULT_PROFILE_URI.value = "http://opcfoundation.org/UA-Profile/Transport/uatcp-uasc-uabinary"
 
-  custom request_indicator : NodeID = NodeID.new
+  custom request_indicator : NodeID = NodeID.new(ObjectId[:get_endpoints_request_encoding_default_binary])
   custom request_header : RequestHeader = RequestHeader.new
 
-  int32 :endpoint_url_size, value: ->{ OPC.store endpoint_url.bytesize }
-  string :endpoint_url, length: ->{ OPC.calculate endpoint_url_size }
-
-  int32 :locale_ids_size, value: ->{ OPC.store locale_ids.size }
-  array locale_ids : GenericString, length: ->{ OPC.calculate locale_ids_size }
-
-  int32 :profile_uris_size, value: ->{ OPC.store profile_uris.size }
-  array profile_uris : GenericString, length: ->{ OPC.calculate profile_uris_size }
+  OPC.string :endpoint_url
+  OPC.array locale_ids : GenericString
+  OPC.array profile_uris : GenericString
 end

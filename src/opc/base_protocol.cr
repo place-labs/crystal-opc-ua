@@ -56,8 +56,7 @@ module OPC
     uint32 :send_buffer_size
     uint32 :max_message_size
     uint32 :max_chunk_count
-    int32 :endpoint_url_size, value: ->{ OPC.store endpoint_url.bytesize }
-    string :endpoint_url, length: ->{ OPC.calculate endpoint_url_size }
+    OPC.string :endpoint_url
   end
 
   # Acknowledge represents a OPC UA Acknowledge.
@@ -82,8 +81,7 @@ module OPC
     endian little
 
     uint32 :code
-    int32 :reason_size, value: ->{ OPC.store reason.bytesize }
-    string :reason, length: ->{ OPC.calculate reason_size }
+    OPC.string :reason
   end
 
   # ReverseHello represents a OPC UA ReverseHello.
@@ -92,10 +90,7 @@ module OPC
   class ReverseHelloMessage < BinData
     endian little
 
-    int32 :server_uri_size, value: ->{ OPC.store server_uri.bytesize }
-    string :server_uri, length: ->{ OPC.calculate server_uri_size }
-
-    int32 :endpoint_url_size, value: ->{ OPC.store endpoint_url.bytesize }
-    string :endpoint_url, length: ->{ OPC.calculate endpoint_url_size }
+    OPC.string :server_uri
+    OPC.string :endpoint_url
   end
 end

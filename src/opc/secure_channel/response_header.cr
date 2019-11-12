@@ -11,9 +11,7 @@ class OPC::ResponseHeader < BinData
 
   # https://reference.opcfoundation.org/v104/Core/docs/Part4/7.8/
   uint8 service_diagnostics
-
-  int32 :string_table_size, value: ->{ OPC.store string_table.size }
-  array string_table : GenericString, length: ->{ OPC.calculate string_table_size }
+  OPC.array string_table : GenericString
 
   custom additional_header : ExtensionObject = ExtensionObject.new
 end

@@ -15,15 +15,14 @@ module OPC
   class OpenSecureChannelRequest < BinData
     endian little
 
-    custom request_indicator : NodeID = NodeID.new
+    custom request_indicator : NodeID = NodeID.new(ObjectId[:open_secure_channel_request_encoding_default_binary])
     custom request_header : RequestHeader = RequestHeader.new
 
     uint32 :protocol_version
     enum_field UInt32, request_type : SecurityTokenRequestType = SecurityTokenRequestType::Issue
     enum_field UInt32, security_mode : MessageSecurityMode = MessageSecurityMode::NoSecurity
 
-    int32 :client_nonce_size, value: ->{ OPC.store client_nonce.size }
-    bytes :client_nonce, length: ->{ OPC.calculate client_nonce_size }
+    OPC.bytes :client_nonce
 
     # Milliseconds to keep the channel alive
     uint32 :requested_lifetime

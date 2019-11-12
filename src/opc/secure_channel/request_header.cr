@@ -13,8 +13,7 @@ class OPC::RequestHeader < BinData
   uint32 return_diagnostics
 
   # For tracking requests through different systems
-  int32 :audit_entry_id_size, value: ->{ OPC.store audit_entry_id.bytesize }
-  string :audit_entry_id, length: ->{ OPC.calculate audit_entry_id_size }
+  OPC.string :audit_entry_id
 
   # How long the client is willing to wait for a response (optional)
   uint32 :timeout_hint

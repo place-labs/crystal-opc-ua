@@ -11,7 +11,12 @@ module OPC
   class LocalizedText < BinData
     endian little
 
-    enum_field UInt8, mask : LocalizedTextFlags = LocalizedTextFlags::None
+    enum_field UInt8, mask : LocalizedTextFlags = LocalizedTextFlags::None, value: -> do
+      temp = LocalizedTextFlags::None
+      temp |= LocalizedTextFlags::Locale if locale.bytesize > 0
+      temp |= LocalizedTextFlags::Text if text.bytesize > 0
+      temp
+    end
 
     int32 :locale_size, value: ->{ OPC.store locale.bytesize }, onlyif: ->{ mask.locale? }
     string :locale, length: ->{ OPC.calculate locale_size }, onlyif: ->{ mask.locale? }

@@ -14,13 +14,9 @@ module OPC
     endian little
 
     # i.e. "http://opcfoundation.org/UA/SecurityPolicy#None"
-    int32 :security_policy_uri_length, value: ->{ OPC.store security_policy_uri.bytesize }
-    string :security_policy_uri, length: ->{ OPC.calculate security_policy_uri_length }
-
-    int32 :sender_certificate_length, value: ->{ OPC.store sender_certificate.size }
-    bytes :sender_certificate, length: ->{ OPC.calculate sender_certificate_length }
-    int32 :receiver_certificate_thumbprint_length, value: ->{ OPC.store receiver_certificate_thumbprint.size }
-    bytes :receiver_certificate_thumbprint, length: ->{ OPC.calculate receiver_certificate_thumbprint_length }
+    OPC.string :security_policy_uri
+    OPC.bytes :sender_certificate
+    OPC.bytes :receiver_certificate_thumbprint
   end
 
   # https://reference.opcfoundation.org/v104/Core/docs/Part6/6.7.2/

@@ -11,6 +11,20 @@ module OPC
   # class MessageFooter
   # TODO:: involves encryption
   # end
+  macro string(name)
+    int32 :{{name.id}}_size, value: ->{ OPC.store {{name.id}}.bytesize }
+    string :{{name.id}}, length: ->{ OPC.calculate {{name.id}}_size }
+  end
+
+  macro bytes(name)
+    int32 :{{name.id}}_size, value: ->{ OPC.store {{name.id}}.size }
+    bytes :{{name.id}}, length: ->{ OPC.calculate {{name.id}}_size }
+  end
+
+  macro array(name)
+    int32 {{name.var}}_size, value: ->{ OPC.store {{name.var}}.size }
+    array {{name.var}} : {{name.type}}, length: ->{ OPC.calculate {{name.var}}_size }
+  end
 
   class UnexpectedMessage < Exception
     property message_data : IO::Memory? = nil
@@ -36,4 +50,5 @@ require "./opc/object_id"
 require "./opc/status_codes"
 require "./opc/object_types/*"
 require "./opc/secure_channel/*"
+require "./opc/session/*"
 require "./opc/*"

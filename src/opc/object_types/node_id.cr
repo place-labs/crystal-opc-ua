@@ -7,15 +7,62 @@ module OPC
     String
     GUID
     ByteString
-    NamespaceUriFlag = 0x80
-    ServerIndexFlag  = 0x40
+  end
+
+  @[Flags]
+  enum Flag
+    ServerIndexFlag
+    NamespaceUriFlag
   end
 
   # https://reference.opcfoundation.org/v104/Core/docs/Part6/5.2.2/#Table5
   class NodeID < BinData
     endian little
 
-    enum_field UInt8, node_type : TypeOfNodeID = TypeOfNodeID::TwoByte
+    def self.new(value)
+      node = NodeID.new
+      node.value = value
+      node
+    end
+
+    def value=(data)
+      if data.is_a?(UInt8)
+        self.node_type = TypeOfNodeID::TwoByte
+        @two_byte_data = data
+      end
+
+      if data.is_a?(UInt16)
+        self.node_type = TypeOfNodeID::FourByte
+        @four_byte_data = data
+      end
+
+      if data.is_a?(UInt32)
+        self.node_type = TypeOfNodeID::Numeric
+        @numeric_data = data
+      end
+
+      if data.is_a?(UInt128)
+        self.node_type = TypeOfNodeID::GUID
+        @numeric_data = data
+      end
+
+      if data.is_a?(String)
+        self.node_type = TypeOfNodeID::String
+        @string_data = data
+      end
+
+      if data.is_a?(Bytes)
+        self.node_type = TypeOfNodeID::ByteString
+        @byte_string_data = data
+      end
+
+      data
+    end
+
+    bit_field do
+      enum_bits 2, flags : Flag = Flag::None
+      enum_bits 6, node_type : TypeOfNodeID = TypeOfNodeID::TwoByte
+    end
 
     # if node_type == 0
     uint8 :two_byte_data, onlyif: ->{ node_type == TypeOfNodeID::TwoByte }
@@ -29,6 +76,9 @@ module OPC
 
     # Numeric
     uint32 :numeric_data, onlyif: ->{ node_type == TypeOfNodeID::Numeric }
+
+    # GUID
+    uint128 :guid, onlyif: ->{ node_type == TypeOfNodeID::GUID }
 
     # String
     int32 :string_data_size, value: ->{ OPC.store string_data.bytesize }, onlyif: ->{ node_type == TypeOfNodeID::String }

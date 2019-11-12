@@ -36,6 +36,7 @@ class OPC::Channel # < IO
     @channel_id = 0_u32
     @token_id = 0_u32
     @requests = {} of UInt32 => ::Promise::DeferredPromise(Response)
+    @security_policies = [] of EndPointDescription
 
     # Message extraction
     @parts = [] of Bytes
@@ -50,6 +51,8 @@ class OPC::Channel # < IO
 
     spawn { self.consume_io }
   end
+
+  getter endpoint_url
 
   def open?
     @state == State::ChannelOpen
@@ -190,16 +193,22 @@ class OPC::Channel # < IO
     perform_send(msg.to_slice, :close_secure_channel, expect_response: false)
   end
 
-  def supported_security_policies
+  # Allow these to be cached
+  def security_policies=(policies : Array(EndPointDescription))
+    @security_policies = policies
+  end
+
+  def security_policies
+    return @security_policies unless @security_policies.empty?
     raise "channel not open" unless open?
 
     request = GetEndPointsRequest.new
-    request.request_indicator.node_type = TypeOfNodeID::FourByte
-    request.request_indicator.four_byte_data = ObjectId[:get_endpoints_request_encoding_default_binary]
     request.endpoint_url = @endpoint_url
     response = send(request)
     request_indicator = response.read_bytes NodeID
-    response.read_bytes GetEndPointsResponse
+    resp = response.read_bytes GetEndPointsResponse
+
+    @security_policies = resp.endpoints.sort { |a, b| a.security_level <=> b.security_level }
   end
 
   protected def write_parts(*parts)
@@ -235,8 +244,6 @@ class OPC::Channel # < IO
     # TODO:: configure alternative security types
     secure.security_mode = MessageSecurityMode::NoSecurity
     secure.requested_lifetime = 1.hour.total_milliseconds.to_u32
-    secure.request_indicator.node_type = TypeOfNodeID::FourByte
-    secure.request_indicator.four_byte_data = ObjectId[:open_secure_channel_request_encoding_default_binary]
     secure
   end
 
@@ -280,9 +287,11 @@ class OPC::Channel # < IO
     when "ACK"
       @requests[0].resolve(io)
     when "ERR"
-      error = io.read_bytes ErrorMessage
-      puts "received error: #{error.reason} (#{error.code})"
-      @requests[0].resolve(io) if !open?
+      err = io.read_bytes ErrorMessage
+      error = Error.new("#{err.reason} (#{err.code})")
+      error.error_code = err.code
+      puts error.message
+      @requests[0].reject(error)
     when "RHE"
       rhello = io.read_bytes ReverseHelloMessage
       open(rhello.endpoint_url)
@@ -333,18 +342,5 @@ class OPC::Channel # < IO
     # @timeouts.try &.cancel
 
     # TODO:: reject any pending requests
-  end
-end
-
-class OPC::Session
-  enum State
-    Idle
-    SessionRequested
-    SessionOpen
-    SessionClosed
-  end
-
-  def initialize(@channel : OPC::Channel, @logger = Logger.new)
-    @state = State::Idle
   end
 end

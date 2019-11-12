@@ -630,7 +630,15 @@ describe OPC do
     header = memory.read_bytes OPC::MessageHeader
     security_header = memory.read_bytes OPC::SymmetricSecurityHeader
     sequence_header = memory.read_bytes OPC::SequenceHeader
+
+    pos1 = memory.pos
     request_indicator = memory.read_bytes OPC::NodeID
+    pos2 = memory.pos
     response_header = memory.read_bytes OPC::GetEndPointsResponse
+
+    memory2 = IO::Memory.new
+    memory2.write_bytes request_indicator
+
+    memory2.to_slice.should eq(memory.to_slice[pos1...pos2])
   end
 end
