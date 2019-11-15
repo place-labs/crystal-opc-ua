@@ -6,7 +6,7 @@ module OPC
     uint32 :secure_channel_id
   end
 
-  # TODO:: When parsing the security headers we need to peak the secure channel ID
+  # When parsing the security headers we need to peak the secure channel ID
   # so we can determine if we are using Symmetric or Asymmetric encryption
   #
   # https://reference.opcfoundation.org/v104/Core/docs/Part6/6.7.2/

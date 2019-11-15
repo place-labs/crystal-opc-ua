@@ -3,15 +3,14 @@
 class OPC::ApplicationInstanceCertificate < BinData
   endian little
 
-  # TODO:: ApplicationInstanceCertificate
   OPC.string :version
   OPC.bytes :serial_number
   OPC.string :signature_algorithm
   OPC.bytes :signature
-  # TODO:: issuer
+  # TODO:: issuer (Structure)
   uint64 :valid_from
   uint64 :valid_to
-  # TODO:: subject
+  # TODO:: subject (Structure)
   OPC.string :application_uri
   OPC.array hostnames : GenericString
   OPC.bytes :public_key

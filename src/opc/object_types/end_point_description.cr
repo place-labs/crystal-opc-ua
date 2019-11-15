@@ -12,10 +12,7 @@ class OPC::EndPointDescription < BinData
 
   enum_field UInt32, security_mode : MessageSecurityMode = MessageSecurityMode::NoSecurity
   OPC.string :security_policy_uri
-
-  int32 :user_identity_tokens_size, value: ->{ OPC.store user_identity_tokens.size }
-  array user_identity_tokens : UserTokenPolicy, length: ->{ OPC.calculate user_identity_tokens_size }
-
+  OPC.array user_identity_tokens : UserTokenPolicy
   OPC.string :transport_profile_uri
 
   # Just here so you can sort on security level (higher is better)

@@ -10,7 +10,7 @@ module OPC
   end
 
   @[Flags]
-  enum Flag
+  enum NodeIDFlags
     ServerIndexFlag
     NamespaceUriFlag
   end
@@ -60,7 +60,7 @@ module OPC
     end
 
     bit_field do
-      enum_bits 2, flags : Flag = Flag::None
+      enum_bits 2, flags : NodeIDFlags = NodeIDFlags::None
       enum_bits 6, node_type : TypeOfNodeID = TypeOfNodeID::TwoByte
     end
 

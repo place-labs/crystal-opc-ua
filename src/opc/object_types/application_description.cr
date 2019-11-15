@@ -20,8 +20,6 @@ module OPC
 
     OPC.string :gateway_server_uri
     OPC.string :discovery_profile_uri
-
-    int32 :disovery_urls_size, value: ->{ OPC.store disovery_urls.size }
-    array disovery_urls : GenericString, length: ->{ OPC.calculate disovery_urls_size }
+    OPC.array disovery_urls : GenericString
   end
 end

@@ -11,19 +11,19 @@ module OPC
   # class MessageFooter
   # TODO:: involves encryption
   # end
-  macro string(name)
-    int32 :{{name.id}}_size, value: ->{ OPC.store {{name.id}}.bytesize }
-    string :{{name.id}}, length: ->{ OPC.calculate {{name.id}}_size }
+  macro string(name, onlyif = nil)
+    int32 :{{name.id}}_size, value: ->{ OPC.store {{name.id}}.bytesize }, onlyif: {{onlyif}}
+    string :{{name.id}}, length: ->{ OPC.calculate {{name.id}}_size }, onlyif: {{onlyif}}
   end
 
-  macro bytes(name)
-    int32 :{{name.id}}_size, value: ->{ OPC.store {{name.id}}.size }
-    bytes :{{name.id}}, length: ->{ OPC.calculate {{name.id}}_size }
+  macro bytes(name, onlyif = nil)
+    int32 :{{name.id}}_size, value: ->{ OPC.store {{name.id}}.size }, onlyif: {{onlyif}}
+    bytes :{{name.id}}, length: ->{ OPC.calculate {{name.id}}_size }, onlyif: {{onlyif}}
   end
 
-  macro array(name)
-    int32 {{name.var}}_size, value: ->{ OPC.store {{name.var}}.size }
-    array {{name.var}} : {{name.type}}, length: ->{ OPC.calculate {{name.var}}_size }
+  macro array(name, onlyif = nil)
+    int32 {{name.var}}_size, value: ->{ OPC.store {{name.var}}.size }, onlyif: {{onlyif}}
+    array {{name.var}} : {{name.type}}, length: ->{ OPC.calculate {{name.var}}_size }, onlyif: {{onlyif}}
   end
 
   class UnexpectedMessage < Exception
@@ -51,4 +51,5 @@ require "./opc/status_codes"
 require "./opc/object_types/*"
 require "./opc/secure_channel/*"
 require "./opc/session/*"
+require "./opc/requests/*"
 require "./opc/*"
