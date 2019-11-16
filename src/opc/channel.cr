@@ -213,7 +213,7 @@ class OPC::Channel # < IO
 
   protected def write_parts(*parts)
     STDOUT.sync = true
-    puts "writing:\n #{parts}"
+    puts "writing:\n #{parts.map(&.map(&.to_s(16)))}"
     @write_mutex.synchronize do
       parts.each { |bytes| @io.write bytes }
       @io.flush

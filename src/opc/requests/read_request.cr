@@ -12,7 +12,11 @@ module OPC
   class ReadValueId < BinData
     endian little
 
-    custom node_id : NodeID = NodeID.new(ObjectId[:read_request_encoding_default_binary])
+    def initialize(value)
+      @node_id = NodeID.new(value)
+    end
+
+    custom node_id : NodeID
     uint32 attribute_id
 
     # https://reference.opcfoundation.org/v104/Core/docs/Part4/7.22/

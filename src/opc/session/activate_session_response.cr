@@ -4,7 +4,7 @@ module OPC
   class ActivateSessionResponse < BinData
     endian little
 
-    custom response_indicator : NodeID = NodeID.new(ObjectId[:activate_session_request_encoding_default_binary])
+    # custom response_indicator : NodeID = NodeID.new(ObjectId[:activate_session_request_encoding_default_binary])
     custom response_header : ResponseHeader = ResponseHeader.new
 
     OPC.bytes server_nonce

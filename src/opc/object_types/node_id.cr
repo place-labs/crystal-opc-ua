@@ -26,6 +26,8 @@ module OPC
     end
 
     def value=(data)
+      # NOTE:: efficient as the is_a macro means the calculation is done at
+      # compile time not runtime
       if data.is_a?(UInt8)
         self.node_type = TypeOfNodeID::TwoByte
         @two_byte_data = data
@@ -43,7 +45,7 @@ module OPC
 
       if data.is_a?(UInt128)
         self.node_type = TypeOfNodeID::GUID
-        @numeric_data = data
+        @guid = data
       end
 
       if data.is_a?(String)

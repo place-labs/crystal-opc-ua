@@ -3,9 +3,12 @@
 class OPC::ExpandedNodeID < BinData
   endian little
 
-  custom node_id : NodeID = NodeID.new
+  # Checks for namespace id size
+  custom node_id : NodeID = NodeID.new, value: -> do
+    node_id.flags = (node_id.flags | NodeIDFlags::NamespaceUriFlag) if namespace_uri.bytesize > 0
+    node_id
+  end
 
-  # TODO:: onlyif certain values of the above node id are present
-  OPC.string audit_entry_id
-  uint32 server_index
+  OPC.string namespace_uri, onlyif: ->{ node_id.flags.namespace_uri_flag? }
+  uint32 server_index, onlyif: ->{ node_id.flags.server_index_flag? }
 end

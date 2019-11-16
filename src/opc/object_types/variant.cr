@@ -76,7 +76,7 @@ module OPC
       # NOTE:: Not sure if this works.. How can you de-serialise the above without
       # knowning the value of these dimensions first? Catch 22 when de-serialising
       # Bad OPC UA
-      OPC.array dimensions : Int32, onlyif: ->{ arrays.array_dimensions? }
+      OPC.array dimensions : Int32, onlyif: ->{ parent.arrays.array_dimensions? }
     end
   end
 end

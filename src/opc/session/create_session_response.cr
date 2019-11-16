@@ -4,7 +4,7 @@ module OPC
   class CreateSessionResponse < BinData
     endian little
 
-    custom request_indicator : NodeID = NodeID.new(ObjectId[:create_session_response])
+    # custom request_indicator : NodeID = NodeID.new(ObjectId[:create_session_response])
     custom response_header : ResponseHeader = ResponseHeader.new
     custom session_id : NodeID = NodeID.new
     custom authentication_token : NodeID = NodeID.new
