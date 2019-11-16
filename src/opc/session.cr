@@ -20,6 +20,16 @@ class OPC::Session
     @state = State::Idle
     @activated = false
 
+    user_policy = nil
+    @security_policy.user_identity_tokens.each do |policy|
+      if policy.token_type.anonymous?
+        user_policy = policy
+        break
+      end
+    end
+    @user_policy = user_policy.not_nil!
+    @user_identity_type = ObjectId[:anonymous_identity_token_encoding_default_binary]
+
     @timeout = 0
     @session_id = NodeID.new
     @auth_token = NodeID.new
@@ -27,7 +37,12 @@ class OPC::Session
     @request_handle = 2_u32
   end
 
+  # TODO:: initializer that accepts a username and password
+
+  @user_policy : UserTokenPolicy
+  @user_identity_type : UInt16
   property channel : OPC::Channel
+
 
   def channel=(@channel) : OPC::Channel
     return @channel if @state == State::SessionClosed
@@ -89,8 +104,9 @@ class OPC::Session
     activate = ActivateSessionRequest.new
     activate.request_header.authentication_token = @auth_token
 
-    activate.user_identity.type = ObjectId[:anonymous_identity_token_encoding_default_binary]
-    activate.user_identity.data = "open62541-anonymous-policy".to_slice
+    # example: "open62541-anonymous-policy".to_slice
+    activate.user_identity.data = GenericBytes.new(@user_policy.policy_id.to_slice)
+    activate.user_identity.type = @user_identity_type
     activate.locale_ids << GenericString.new("en-AU")
 
     # Parse activation response
@@ -116,22 +132,30 @@ class OPC::Session
     promise.get.not_nil!
   end
 
-  def read(value) : ReadResponse
+  def read(node, attribute) : ReadResponse
     req = OPC::ReadRequest.new
-    read = OPC::ReadValueId.new(value)
-    req.nodes_to_read << read
+    req.nodes_to_read << OPC::ReadValueId.new(node, attribute)
     io = send req
 
-    check_response(io, :read_response, :read_response_encoding_default_binary)
-    io.read_bytes(ReadResponse)
+    header = check_response(io, :read_response, :read_response_encoding_default_binary)
+    response = io.read_bytes(ReadResponse)
+    response.header = header
+    response
   end
 
   def check_response(io, *codes)
     node_id = io.read_bytes(NodeID)
     response_code = ObjectLookup[node_id.four_byte_data]
+    response = io.read_bytes(ResponseHeader)
 
-    if !codes.includes?(response_code)
-      response = io.read_bytes(ResponseHeader)
+    if codes.includes?(response_code)
+      if response.service_result != 0_u32
+        error, description = STATUS_DESCRIPTION[response.service_result]
+        error = Error.new "#{error}: #{description} (0x#{response.service_result.to_s(16)})"
+        error.error_code = response.service_result
+        raise error
+      end
+    else
       if response.service_result == 0_u32
         error = UnexpectedMessage.new "unexpected response #{response_code} (node_id.four_byte_data)"
         io.rewind
@@ -145,6 +169,8 @@ class OPC::Session
         raise error
       end
     end
+
+    response
   end
 
   def close

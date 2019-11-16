@@ -23,5 +23,16 @@ module OPC
     uint16 source_picoseconds, onlyif: ->{ mask.has_source_picoseconds? }
     uint64 server_timestamp, onlyif: ->{ mask.has_server_timestamp? }
     uint16 server_picoseconds, onlyif: ->{ mask.has_server_picoseconds? }
+
+    def error?
+      return nil if self.status_code == 0
+
+      error, description = STATUS_DESCRIPTION[@status_code]
+      error = Error.new "#{error}: #{description} (0x#{@status_code.to_s(16)})"
+      error.error_code = @status_code
+      error
+    end
+
+    forward_missing_to @value
   end
 end

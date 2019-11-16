@@ -12,11 +12,14 @@ module OPC
   class ReadValueId < BinData
     endian little
 
-    def initialize(value)
-      @node_id = NodeID.new(value)
+    def self.new(node, attribute)
+      read = ReadValueId.new
+      read.node_id.value = node
+      read.attribute_id = attribute
+      read
     end
 
-    custom node_id : NodeID
+    custom node_id : NodeID = NodeID.new
     uint32 attribute_id
 
     # https://reference.opcfoundation.org/v104/Core/docs/Part4/7.22/

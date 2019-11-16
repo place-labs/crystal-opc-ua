@@ -14,7 +14,6 @@ module OPC
     custom type_id : NodeID = NodeID.new
     enum_field UInt8, encoding : BodyEncoding = BodyEncoding::NoBody
 
-    int32 :total_length, value: ->{ OPC.store((encoding == BodyEncoding::ByteString ? byte_data.size : xml_data.bytesize) + 4) }, onlyif: ->{ encoding != BodyEncoding::NoBody }
     int32 :length, value: ->{ OPC.store(encoding == BodyEncoding::ByteString ? byte_data.size : xml_data.bytesize) }, onlyif: ->{ encoding != BodyEncoding::NoBody }
     bytes :byte_data, length: ->{ OPC.calculate length }, onlyif: ->{ encoding == BodyEncoding::ByteString }
     string :xml_data, length: ->{ OPC.calculate length }, onlyif: ->{ encoding == BodyEncoding::XmlElement }
@@ -26,10 +25,14 @@ module OPC
     def data=(value)
       if value.nil?
         self.encoding = BodyEncoding::NoBody
-      elsif value.is_a?(String)
+      end
+
+      if value.is_a?(String)
         self.encoding = BodyEncoding::XmlElement
         self.xml_data = value
-      elsif value.is_a?(Bytes)
+      end
+
+      if value.is_a?(Bytes)
         self.encoding = BodyEncoding::ByteString
         self.byte_data = value
       end
