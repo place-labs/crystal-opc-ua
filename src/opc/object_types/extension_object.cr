@@ -35,6 +35,9 @@ module OPC
       if value.is_a?(Bytes)
         self.encoding = BodyEncoding::ByteString
         self.byte_data = value
+      else
+        self.encoding = BodyEncoding::ByteString
+        self.byte_data = value.to_slice
       end
 
       value

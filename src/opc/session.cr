@@ -105,7 +105,7 @@ class OPC::Session
     activate.request_header.authentication_token = @auth_token
 
     # example: "open62541-anonymous-policy".to_slice
-    activate.user_identity.data = GenericBytes.new(@user_policy.policy_id.to_slice)
+    activate.user_identity.data = GenericString.new(@user_policy.policy_id)
     activate.user_identity.type = @user_identity_type
     activate.locale_ids << GenericString.new("en-AU")
 
