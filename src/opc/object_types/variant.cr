@@ -78,5 +78,7 @@ module OPC
       # Bad OPC UA
       OPC.array dimensions : Int32, onlyif: ->{ parent.arrays.array_dimensions? }
     end
+
+    forward_missing_to @single_data
   end
 end

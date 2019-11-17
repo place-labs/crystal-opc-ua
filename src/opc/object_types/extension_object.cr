@@ -42,5 +42,10 @@ module OPC
 
       value
     end
+
+    def extract(klass)
+      io = IO::Memory.new(self.byte_data)
+      io.read_bytes(klass)
+    end
   end
 end
