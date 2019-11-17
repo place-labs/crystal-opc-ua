@@ -212,8 +212,6 @@ class OPC::Channel # < IO
   end
 
   protected def write_parts(*parts)
-    STDOUT.sync = true
-    puts "writing:\n #{parts.map(&.map(&.to_s(16)))}"
     @write_mutex.synchronize do
       parts.each { |bytes| @io.write bytes }
       @io.flush
@@ -258,7 +256,6 @@ class OPC::Channel # < IO
     message_type = header.message_type
 
     #@logger.debug { "received #{message_type}" }
-    puts "received:\n #{message_type}"
 
     case message_type
     when "MSG", "OPN"
@@ -290,7 +287,6 @@ class OPC::Channel # < IO
       err = io.read_bytes ErrorMessage
       error = Error.new("#{err.reason} (#{err.code})")
       error.error_code = err.code
-      puts error.message
       @requests[0].reject(error)
     when "RHE"
       rhello = io.read_bytes ReverseHelloMessage
